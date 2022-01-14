@@ -3,7 +3,7 @@
 《计算机程序的构造和解释》
 - 讲述计算机程序的道与术，授人以渔的方法论，而非某确切技术的细枝末节。
 - MIT有使用本书的课程：6.001: Structure and Interpretation of Computer Programs。
-- 使用Lisp的方言Scheme作用开发语言。不需要先系统学习Scheme，在看书过程中学习使用就行。
+- 使用Lisp的方言Scheme（R5RS版本）作为开发语言。不需要先系统学习Scheme，在看书过程中学习使用就行。
 - Scheme是一门动态的、函数式的编程语言。
 
 ## 书籍阅读
@@ -96,13 +96,24 @@ REPL环境：
 - 命令：`Ctrl+Shift+P, Racket:...`。
 
 其他插件：
-- 彩虹括号2，提供自定义的括号高亮。
-- AyaSEditor插件提供括号缩进支持，也可以不用。
+- Bracket Pair Colorizer 2，提供自定义的括号高亮。没有不同颜色的括号写Lisp系的语言光想一想都会很痛苦。我的色彩配置：
+```json
+    "bracket-pair-colorizer-2.colors": [
+        "Gold",
+        "Orchid",
+        "LightSkyBlue",
+        "Orange",
+        "Red",
+        "Greenyellow"
+    ],
+```
+- AyaSEditor插件可以对Racket语法提供自动缩进对齐，也可以不用，手动对齐即可。
 
 ## 更多资料
 
 Scheme语言：
 - Yet Another Scheme Tutorial是一本Scheme入门教程，[中文版翻译](http://deathking.github.io/yast-cn/)。
+- SICP中用的[R5RS版本的Scheme文档](https://docs.racket-lang.org/r5rs/r5rs-std/r5rs.html)。
 
 MIT课程资料：
 - MIT视频公开课《计算机程序的构造和解释》中文化项目及课程学习资料搜集：[DeathKing/Learning-SICP](https://github.com/DeathKing/Learning-SICP/)。
