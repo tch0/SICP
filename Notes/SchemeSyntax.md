@@ -28,8 +28,32 @@ S-表达式：
 - 关系运算：`> >= < <= =`
 
 内置过程（函数）：
+- [R5RS Scheme的标准过程文档](https://docs.racket-lang.org/r5rs/r5rs-std/r5rs-Z-H-9.html)。
 - `(remainder a b)` 求余`a % b`。
-- `(even? n)` 判断是否为偶数。
+- `(even? n)` 判断是否为偶数，`odd`偶数。
 - `(gcd a b)` 最大公约数。
 - `(newline)` 输出新行。
-- `(display obj)`输出一个对象的字符串表示。
+- `(display obj)` 输出一个对象的字符串表示。
+- `(expt a b)` 求a的b次方。
+
+
+来自Racket的过程或常量：
+- 不在R5RS版本的Scheme语法中，但在Racket的引入`#lang sicp`后可以使用。如果需要移植到其他支持R5RS版本的Scheme的解释器上的话需要考虑这些值或函数是否存在或含义是否相同。
+- `nil : null?`,`'()`的别名，空值？
+- `inc x`自增，等价于`(+ x 1)`。
+- `dec x`自减，等价于`(- x 1)`。
+- `the-empty-stream : stream?`，空的流。
+- `(cons-stream first-expr rest-expr)`产生一个`stream`。
+- `(stream-null? s) → boolean?`流是否为空，返回`#t #f`。
+- `(runtime) → natural-number/c`微秒为单位的当前时间测量，有一个固定的开始。
+- `(random n) → real?`生成0到n-1的随机整数，如果n是整数，如果不是，则生成0到n（不包含）的随机（浮点）数。
+- `(amb expr ...)`amb运算符。这是什么东西？
+- `true false`表示`#t #f`。
+- `(identity v)`返回参数自己。
+- `(error message-sym) → any`抛出错误，打印错误信息，有多个重载。
+
+基本数学过程：
+- `(sqrt x)`平方根。
+- `(log x)` 自然对数。
+- `(exp x)` 自然对数的底数e的幂。
+
