@@ -41,7 +41,7 @@
     ((iterative-improve close-enough? f) first-guess)
 )
 
-; use fixed point define to get square root
+; use fixed point define square root
 (define (mysqrt2 x)
     (fixed-point (lambda (y) (average y (/ x y)))
                  1.0)

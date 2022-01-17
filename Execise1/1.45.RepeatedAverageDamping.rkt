@@ -39,8 +39,6 @@
 )
 ; =====================================================================
 
-
-; =====================================================================
 ; do many times of average damping for convergence of y^n = x
 
 ; example: root of y^4 = x, do 2 times average damping
@@ -67,7 +65,7 @@
 ; 经过充分测试，y^n = x需要logn向下取整次平均阻尼就能收敛，不能收敛时会进入无限循环。
 ((damped-nth-root 4 2) (4th-power 10.5))
 
-; ceiling(logn), base = 2
+; floor(logn), base = 2
 ; the library (log x) is natural log
 (define (lg n)
     (cond ((> (/ n 2) 1) (+ 1 (lg (/ n 2))))
