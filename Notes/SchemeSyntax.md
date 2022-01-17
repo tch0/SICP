@@ -29,12 +29,8 @@ S-表达式：
 
 内置过程（函数）：
 - [R5RS Scheme的标准过程文档](https://docs.racket-lang.org/r5rs/r5rs-std/r5rs-Z-H-9.html)。
-- `(remainder a b)` 求余`a % b`。
-- `(even? n)` 判断是否为偶数，`odd`偶数。
-- `(gcd a b)` 最大公约数。
 - `(newline)` 输出新行。
 - `(display obj)` 输出一个对象的字符串表示。
-- `(expt a b)` 求a的b次方。
 
 
 来自Racket的过程或常量：
@@ -56,4 +52,12 @@ S-表达式：
 - `(sqrt x)`平方根。
 - `(log x)` 自然对数。
 - `(exp x)` 自然对数的底数e的幂。
+- `(expt a b)` 求a的b次方。
+- `(remainder a b)` 求余`a % b`。
+- `(even? n)` 判断是否为偶数，`odd?`偶数。
+- `(gcd a b)` 最大公约数。
 
+序对操作：
+- `(cons a b)`得到序对`(a . b)`
+- `(car x)`，取序对第一个元素。
+- `(cdr x)`，取序对第二个元素。
