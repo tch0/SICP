@@ -2,6 +2,11 @@
 
 SICP中用的[R5RS版本的Scheme文档](https://docs.racket-lang.org/r5rs/r5rs-std/r5rs.html)。
 
+首先请注意：
+- 谈到语法，请特别注意使用的编译器，支持些什么，不支持些什么，某个语法来自于何处。
+- 推荐使用SICP中统一使用的标准语法也即是R5RS版本的Scheme，Racket中的`#lang sicp`提供了良好的支持。
+- 如果使用`#lang racket`之类，某些语法可能会有些微区别需要注意。
+
 定义函数：
 ```scheme
 (define (func args)
@@ -61,3 +66,9 @@ S-表达式：
 - `(cons a b)`得到序对`(a . b)`
 - `(car x)`，取序对第一个元素。
 - `(cdr x)`，取序对第二个元素。
+- `(cadr x)` 等价于`(car (cdr x))`，类似形式很多比如`caddr cadar`同理。
+
+列表：
+- `nil`Racket提供，等价于`'()`空表。
+- 表`(list 1 2 3)`等价于`'(1 2 3)`。
+- 基本操作`null?`，检查是否是空表。

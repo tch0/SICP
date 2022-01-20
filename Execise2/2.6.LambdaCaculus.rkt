@@ -35,7 +35,7 @@
 (print-numbers two) ; 2
 (print-numbers (+ (+ one two) two)) ; 5
 
-; more than +
+; x ^ y
 (define (expt x y)
     (y x)
 )

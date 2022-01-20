@@ -49,7 +49,7 @@ Windows环境配置：
 - 更多语法细节参考[这里](https://docs.racket-lang.org/sicp-manual/index.html)。
 
 SICP Language的一些语法细节：
-- `nil : null?`,`'()`的别名，空值？
+- `nil : null?`,`'()`的别名，空表。
 - `inc x`自增，等价于`(+ x 1)`。
 - `dec x`自减，等价于`(- x 1)`。
 - `the-empty-stream : stream?`，空的流。
@@ -96,7 +96,7 @@ REPL环境：
 - 命令：`Ctrl+Shift+P, Racket:...`。
 
 其他插件：
-- Bracket Pair Colorizer 2，提供自定义的括号高亮。没有不同颜色的括号写Lisp系的语言光想一想都会很痛苦。我的色彩配置：
+- Bracket Pair Colorizer 2，提供自定义的括号高亮。没有不同颜色的括号写Lisp系的语言光想一想都会很痛苦，当然某些时候也会不可避免地被各种色彩晃瞎狗眼。我的色彩配置：
 ```json
     "bracket-pair-colorizer-2.colors": [
         "Gold",
@@ -119,11 +119,11 @@ MIT课程资料：
 - MIT视频公开课《计算机程序的构造和解释》中文化项目及课程学习资料搜集：[DeathKing/Learning-SICP](https://github.com/DeathKing/Learning-SICP/)。
 
 SICP题解：
-- [SICP中文解题集](https://sicp.readthedocs.io/en/latest/)
-- [Scheme Wiki中的英文题解](http://community.schemewiki.org/?SICP-Solutions)
+- [SICP中文解题集](https://sicp.readthedocs.io/en/latest/)，不是很全，比较难的一些题并没有，解答只有一种比较单一，使用中文非常友好。
+- [Scheme Wiki上的英文题解](http://community.schemewiki.org/?SICP-Solutions)，有多种解答和讨论，可以开阔思路，非常地nice。
 
 在线练习：
-- [SICP（计算机程序的构造和解释）的在线练习场](https://zhuanlan.zhihu.com/p/341576984)
+- [SICP（计算机程序的构造和解释）的在线练习场](https://zhuanlan.zhihu.com/p/341576984)，不知道有什么用，就是写在这里。
 
 关于Lisp：
 - [为什么Lisp语言如此先进？（译文）-阮一峰](http://www.ruanyifeng.com/blog/2010/10/why_lisp_is_superior.html)

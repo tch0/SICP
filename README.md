@@ -9,6 +9,7 @@
 - [Scheme语法汇总](Notes/SchemeSyntax.md)。
 - [SICP中的数学](Notes/MathmeticsInSICP.md)。
 - [Racket使用问题汇总](Notes/UsingRacket.md)。
+- [我的Scheme编码风格](Notes/MySchemeCodingStyle.md)。
 
 License：[WTFPL](LICENSE)。
 
