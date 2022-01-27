@@ -14,6 +14,7 @@ SICP中用的[R5RS版本的Scheme文档](https://docs.racket-lang.org/r5rs/r5rs-
     return-value
 )
 ```
+- 变长参数，`(define (func a . b) ...)`，则`b`可以对应传入零个或者多个参数，组合为一个列表通过参数 `b` 引用，没有时则为`nil`。
 
 S-表达式：
 - 每个`()`的式子称为S表达式，其中第一个值作为函数（运算符也是函数），然后作用于后续的所有参数上求值得到结果。
@@ -59,8 +60,8 @@ S-表达式：
 - `(exp x)` 自然对数的底数e的幂。
 - `(expt a b)` 求a的b次方。
 - `(remainder a b)` 求余`a % b`。
-- `(even? n)` 判断是否为偶数，`odd?`偶数。
-- `(gcd a b)` 最大公约数。
+- `(even? n)` 判断是否为偶数，`odd?`奇数。
+- `(gcd a b)` 最大公约数，`lcm`最小公倍数。
 
 序对操作：
 - `(cons a b)`得到序对`(a . b)`
@@ -69,6 +70,7 @@ S-表达式：
 - `(cadr x)` 等价于`(car (cdr x))`，类似形式很多比如`caddr cadar`同理。
 
 列表：
-- `nil`Racket提供，等价于`'()`空表。
+- 文档：[Pairs and lists](https://docs.racket-lang.org/r5rs/r5rs-std/r5rs-Z-H-9.html#%25_sec_6.3.2)
+- `nil`Racket提供，等价于`'()`空表，或者`(list)`。
 - 表`(list 1 2 3)`等价于`'(1 2 3)`。
 - 基本操作`null?`，检查是否是空表。
