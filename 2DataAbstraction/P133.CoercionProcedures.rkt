@@ -80,19 +80,6 @@
 (define (mul x y) (apply-generic 'mul x y))
 (define (div x y) (apply-generic 'div x y))
 
-; from 2DataAbstraction/P123.DataDirectedProgramming.rkt
-(define (apply-generic op . args)
-    (let ((type-tags (map type-tag args))) ; use list of tags as type
-        (let ((proc (get op type-tags)))
-            (if proc
-                (apply proc (map contents args))
-                (error "No method for these types -- in function apply-generic, "
-                       (list op type-tags))
-            )
-        )
-    )
-)
-
 ; regular arithmetic
 ; tag: scheme-number
 (define (install-scheme-number-package)
@@ -102,11 +89,6 @@
     (put 'mul '(scheme-number scheme-number) (lambda (x y) (tag (* x y))))
     (put 'div '(scheme-number scheme-number) (lambda (x y) (tag (/ x y))))
     (put 'make 'scheme-number (lambda (x) (tag x)))
-    ; Ex 2.79
-    (put 'equ? '(scheme-number scheme-number) =)
-    ; Ex 2.80
-    (put '=zero? '(scheme-number) (lambda (x) (= x 0)))
-    'done
 )
 (define (make-scheme-number x) ((get 'make 'scheme-number) x))
 
@@ -155,14 +137,6 @@
     (put 'mul '(rational rational) (lambda (x y) (tag (mul-rat x y))))
     (put 'div '(rational rational) (lambda (x y) (tag (div-rat x y))))
     (put 'make 'rational (lambda (n d) (tag (make-rat n d))))
-    ; Ex 2.79
-    (put 'equ? '(rational rational)
-        (lambda (x y)
-            (= (* (numer x) (denom y)) (* (denom x) (numer y)))
-        )
-    )
-    ; Ex 2.80
-    (put '=zero? '(rational) (lambda (x) (= (numer x) 0)))
     'done
 )
 (define (make-rational n d) ((get 'make 'rational) n d))
@@ -265,22 +239,10 @@
     (put 'make-from-mag-ang 'complex
         (lambda (r a) (tag (make-from-mag-ang r a)))
     )
-    ; Ex 2.77
     (put 'real-part '(complex) real-part)
     (put 'imag-part '(complex) imag-part)
     (put 'magnitude '(complex) magnitude)
     (put 'angle '(complex) angle)
-    ; Ex 2.79
-    (put 'equ? '(complex complex)
-        (lambda (x y)
-            (and (= (real-part x) (real-part y))
-                 (= (imag-part x) (imag-part y)))
-        )
-    )
-    ; Ex 2.80
-    (put '=zero? '(complex)
-        (lambda (z) (= (real-part z) (imag-part z) 0))
-    )
     'done
 )
 (define (make-complex-from-real-imag x y)
@@ -294,42 +256,65 @@
 (define (magnitude z) (apply-generic 'magnitude z))
 (define (angle z) (apply-generic 'angle z))
 
-; test
-(display "original test:\n")
-(define PI 3.14159265358979323846)
+; =======================================================================
+; all above is from 2DataAbstraction/P129.GenericOperations.rkt
+; =======================================================================
+; coercion table
+(define *coercion-table* (make-table))
+(define (put-coercion from-type to-type item)
+    (insert2! from-type to-type item *coercion-table*)
+)
+(define (get-coercion from-type to-type)
+    (lookup2 from-type to-type *coercion-table*)
+)
+
+; cast procedures
+(define (scheme-number->complex n)
+    (make-complex-from-real-imag (contents n) 0)
+)
+; install coercion procedures to table, not all casts can be applied
+(define (install-corecoin-package)
+    (put-coercion 'scheme-number 'complex scheme-number->complex)
+    'done
+)
+
+; a new apply-generic that take care of cast procedures
+(define (apply-generic op . args)
+    (let ((type-tags (map type-tag args))) ; use list of tags as type
+        (let ((proc (get op type-tags)))
+            (if proc
+                ; find procedure
+                (apply proc (map contents args))
+                ; no such a procedure
+                (if (= (length args) 2)
+                    (let ((type1 (car type-tags))
+                          (type2 (cadr type-tags))
+                          (a1 (car args))
+                          (a2 (cadr args)))
+                        (let ((t1->t2 (get-coercion type1 type2))
+                              (t2->t1 (get-coercion type2 type1)))
+                            (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
+                                  (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+                                  (else (error "No method for these types -- in function apply-generic, "
+                                                (list op type-tags)))
+                            )
+                        )
+                    )
+                    (error "No method for these types -- in function apply-generic, "
+                           (list op type-tags))
+                )
+            )
+        )
+    )
+)
+
+; install all packages
 (install-rectangular-package)
 (install-polar-package)
 (install-scheme-number-package)
 (install-rational-package)
 (install-complex-package)
-(add (make-scheme-number 1) (make-scheme-number 2))
-(sub (make-scheme-number 1) (make-scheme-number 3))
-(mul (make-scheme-number 1) (make-scheme-number 2))
-(div (make-scheme-number 1) (make-scheme-number 2))
-(add (make-rational 1 2) (make-rational 1 3))
-(div (make-rational 1 2) (make-rational 1 3))
-(add (make-complex-from-real-imag 1 1) (make-complex-from-mag-ang 1 (/ PI 4)))
-(div (make-complex-from-real-imag 1 1) (make-complex-from-real-imag 1 0))
-(magnitude (make-complex-from-real-imag 3 4))
-
-; Ex 2.79
-(define (equ? x y) (apply-generic 'equ? x y))
-
+(install-corecoin-package)
 ; test
-(newline)
-(display "Ex 2.79 test:\n")
-(equ? (make-scheme-number 1) (make-scheme-number 2))
-(equ? (make-scheme-number 1) (make-scheme-number 1))
-(equ? (make-rational 1 2) (make-rational 2 4))
-(equ? (make-complex-from-real-imag 1 0) (make-complex-from-mag-ang 1 0)) ; #t
-
-; Ex 2.80
-(define (=zero? x) (apply-generic '=zero? x))
-
-; test
-(newline)
-(display "Ex 2.80 test:\n")
-(=zero? (make-scheme-number 0))
-(=zero? (make-rational 0 10))
-(=zero? (make-complex-from-mag-ang 0 0))
-(=zero? (make-complex-from-real-imag 0 0))
+(add (make-scheme-number 1) (make-complex-from-real-imag 1 2))
+(add (make-complex-from-real-imag 1 2) (make-scheme-number 1))
