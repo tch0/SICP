@@ -870,8 +870,5 @@ Eval：
     - 语义函数
     - 辅助函数
 - 派生的表达式类型实现
-```scheme
-
-```
 
 详见：[Revised5 Report on the Algorithmic Language Scheme - Chapter7 - Formal syntax and semantics](https://schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html)
