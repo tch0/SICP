@@ -1,0 +1,146 @@
+#lang sicp
+
+; auxiliary procedures
+(define (stream-car stream) (car stream))
+(define (stream-cdr stream) (force (cdr stream)))
+(define (stream-ref s n)
+    (if (= n 0)
+        (stream-car s)
+        (stream-ref (stream-cdr s) (- n 1))
+    )
+)
+(define (stream-map proc . argstreams)
+    (if (null? (car argstreams))
+        the-empty-stream
+        (cons-stream
+            (apply proc (map stream-car argstreams))
+            (apply stream-map (cons proc (map stream-cdr argstreams)))
+        )
+    )
+)
+; display specific number items of stream
+(define (display-stream-items s num end)
+    (cond ((<= num 0) (display "===== end of display-stream-items. =====")
+                      (newline))
+          ((stream-null? s) (display-stream-items s 0 end))
+          (else (display (stream-car s))
+                (display end)
+                (display-stream-items (stream-cdr s) (- num 1) end))
+    )
+)
+; filter of stream
+(define (stream-filter predicate stream)
+    (cond ((stream-null? stream) the-empty-stream)
+          ((predicate (stream-car stream)) (cons-stream (stream-car stream)
+                                                        (stream-filter predicate (stream-cdr stream))))
+          (else (stream-filter predicate (stream-cdr stream)))
+    )
+)
+; integers
+(define (integers-starting-from n)
+    (cons-stream n (integers-starting-from (+ n 1)))
+)
+(define integers (integers-starting-from 1))
+; ===============================================================================
+
+; merge streams according to the weight of elements
+(define (merge-weighted s1 s2 weight) 
+    (cond ((stream-null? s1) s2)
+          ((stream-null? s2) s1)
+          (else (let* ((s1car (stream-car s1))
+                       (s2car (stream-car s2))
+                       (w1 (weight s1car))
+                       (w2 (weight s2car)))
+                    (if (< w1 w2)
+                        (cons-stream s1car (merge-weighted (stream-cdr s1) s2 weight))
+                        (cons-stream s2car (merge-weighted s1 (stream-cdr s2) weight))
+                    )
+                )
+          )
+    )
+)
+
+; Part1         Part2
+; (S0,T0) |(S0,T1) (S0,T2),...
+; ---------------------------------
+;         |(S1,T1) (S1,T2),...
+;         |        (S2,T2),...      <-- Part3
+;         |                ...
+(define (weighted-pairs s t weight)
+    (cons-stream (list (stream-car s) (stream-car t))
+                 (merge-weighted (stream-map (lambda (x) (list (stream-car s) x))
+                                             (stream-cdr t))
+                                 (weighted-pairs (stream-cdr s) (stream-cdr t) weight)
+                                 weight
+                 )
+    )
+)
+
+; test
+; a)
+(define (sum-weight x) (+ (car x) (cadr x)))
+(define a-pairs (weighted-pairs integers integers sum-weight))
+(display-stream-items a-pairs 100 " ")
+(display-stream-items (stream-map sum-weight a-pairs) 100 " ")
+
+; b)
+(define (b-filter? x)
+    (define (divisible? x y) (= (remainder x y) 0))
+    (define (divisible-by235? x)
+        (or (divisible? x 2) (divisible? x 3) (divisible? x 5))
+    )
+    (or (divisible-by235? (car x)) (divisible-by235? (cadr x)))
+)
+(define (b-weight x)
+    (+ (* 2 (car x))
+       (* 3 (cadr x))
+       (* 5 (car x) (cadr x))
+    )
+)
+(define b-pairs (stream-filter b-filter? (weighted-pairs integers integers b-weight)))
+(newline)
+(display-stream-items b-pairs 10 " ")
+(display-stream-items (stream-map b-weight b-pairs) 10 " ")
+
+; Ex 3.71
+; pick numbers that repeat at least two times
+(define (Rumanujan s)
+    (define (stream-cadr s) (stream-car (stream-cdr s)))
+    (define (stream-cddr s) (stream-cdr (stream-cdr s)))
+    (let ((scar (stream-car s))
+          (scadr (stream-cadr s)))
+        (if (= (sum-triple scar) (sum-triple scadr))
+            (cons-stream (list (sum-triple scar) scar scadr)
+                         (Rumanujan (stream-cddr s)))
+            (Rumanujan (stream-cdr s))
+        )
+    )
+)
+(define (triple x) (expt x 3))
+(define (sum-triple x) (+ (triple (car x)) (triple (cadr x))))
+(define Rumanujan-numbers (Rumanujan (weighted-pairs integers integers sum-triple)))
+(newline)
+(display-stream-items Rumanujan-numbers 6 "\n")
+
+; Ex 3.72
+; pick numbers that repeat at least three times
+(define (Equal3 s)
+    (define (stream-cadr s) (stream-car (stream-cdr s)))
+    (define (stream-cddr s) (stream-cdr (stream-cdr s)))
+    (define (stream-caddr s) (stream-car (stream-cddr s)))
+    (define (stream-cdddr s) (stream-cdr (stream-cddr s)))
+    (let ((scar (stream-car s))
+          (scadr (stream-cadr s))
+          (scaddr (stream-caddr s)))
+        (if (= (sum-square scar) (sum-square scadr) (sum-square scaddr))
+            (cons-stream (list (sum-square scar) scar scadr scaddr)
+                         (Equal3 (stream-cdddr s)))
+            (Equal3 (stream-cdr s))
+        )
+    )
+)
+(define (square x) (* x x))
+(define (sum-square x) (+ (square (car x)) (square (cadr x))))
+(define result (Equal3 (weighted-pairs integers  integers sum-square)))
+(newline)
+(display-stream-items result 5 "\n")
