@@ -1,7 +1,20 @@
 #lang sicp
 
-; metacircular evaluator version 2: separate syntax analyzer and evaluator
-; only analyze once, maybe eval for serveral times.
+; lazy evaluation version of previous metacircular evaluator (version 1)
+; use a thunk to save the informations that delayed object need (like the promise in native Scheme).
+; the moments that need force the thunk:
+; 1: deliver it to a primitive procedure as argument, and the primitive procedure need this value now.
+; 2: when it's the predicate of a if expression.
+; 3: when it's the value of a certain operator, and need apply it as a procedure.
+
+; options: remember the result when force it the first time or not.
+; out option is to remember the result cuz it must be more efficient than not.
+
+; works:
+; modify eval, do not evaluate arguments of application in eval.
+; use actual values in application of primitive procedures and delay it in application of compund procedures.
+; replace the above 3 occasions that need actual value from eval to actual-value.
+; modify REPL.
 
 ; ========================================= auxiliary procedures ============================================================
 ; wrap definition and call in a call of no args lambda to constrain the scope
@@ -57,13 +70,13 @@
 ; abstraction of assignment
 (define (assignment? exp) (tagged-list? exp 'set!))
 (define (make-assignment var exp) (list 'set! var exp))
-(define (assignment-variable exp) (cadr exp))
+(define (assignment-varaible exp) (cadr exp))
 (define (assignment-value exp) (caddr exp))
 
 ; assignment
 ; the return value depends on implementation, so returning 'ok is fine here.
 (define (eval-assignment exp env)
-    (set-variable-value! (assignment-variable exp)
+    (set-variable-value! (assignment-varaible exp)
                          (eval (assignment-value exp) env)
                          env
     )
@@ -134,7 +147,7 @@
 
 ; evaluate if expression
 (define (eval-if exp env)
-    (if (true? (eval (if-predicate exp) env))
+    (if (true? (actual-value (if-predicate exp) env))
         (eval (if-consequent exp) env)
         (eval (if-alternative exp) env)
     )
@@ -172,7 +185,7 @@
 ; ========================================= cond ================================================================================
 ; cond is a derived expression
 ; form1: (cond (<test> <action1> <action2> ... <actionn>) ...)
-; form2: (cond (<test> => <recipient>) ...) ; Ex 4.5
+; form2: (cond (<test> => <recipient>) ...)
 
 ; abstraction of cond
 (define (cond? exp) (tagged-list? exp 'cond))
@@ -185,29 +198,28 @@
 ; but then we can not implement the => clause, so better simply implement an eval-cond like.
 
 ; ================= deprecated code ==============
-(define (cond->if exp)
-    (expand-clauses (cond-clauses exp))
-)
-(define (expand-clauses clauses)
-    (if (null? clauses)
-        'false
-        (let ((first (car clauses))
-              (rest (cdr clauses)))
-            (if (cond-else-clause? first)
-                (if (null? rest)
-                    (sequence->exp (cond-actions first))
-                    (error "ELSE clause isn't the last clause -- in procedure cond->if, " clauses)
-                )
-                (make-if (cond-predicate first)
-                         (sequence->exp (cond-actions first))
-                         (expand-clauses rest)
-                )
-            )
-        )
-    )
-)
+; (define (cond->if exp)
+;     (expand-clauses (cond-clauses exp))
+; )
+; (define (expand-clauses clauses)
+;     (if (null? clauses)
+;         'false
+;         (let ((first (car clauses))
+;               (rest (cdr clauses)))
+;             (if (cond-else-clause? first)
+;                 (if (null? rest)
+;                     (sequence->exp (cond-actions first))
+;                     (error "ELSE clause isn't the last clause -- in procedure cond->if, " clauses)
+;                 )
+;                 (make-if (cond-predicate first)
+;                          (sequence->exp (cond-actions first))
+;                          (expand-clauses rest)
+;                 )
+;             )
+;         )
+;     )
+; )
 
-; Ex 4.5
 ; new code that support =>
 ; be careful not to evaluate the predicate twice (consider cases that the predicate expression has side effects).
 (define (eval-cond exp env)
@@ -224,7 +236,7 @@
                       ((imply-clause? first-clause) ; =>
                        (let ((predicate-result (eval (predicate first-clause) env)))
                             (if (true? predicate-result)
-                                (apply- (eval (caddr first-clause) env) (list predicate-result))
+                                (apply- (eval (caddr first-clause) env) (list predicate-result) env)
                                 (eval-clauses rest-clauses)
                             )
                        ))
@@ -232,7 +244,7 @@
                                 (eval-sequence (consequent first-clause))
                                 (eval-clauses rest-clauses)
                             )
-                      ) 
+                      )
                 )
             )
         )
@@ -242,7 +254,6 @@
 
 
 ; ========================================= and/or ==============================================================================
-; Ex 4.4
 ; form: (and/or <exp1> <exp2> ... <expn>), are special forms
 
 ; abstraction of and/or
@@ -294,7 +305,7 @@
 (define (letrec-inits exp) (cadr exp)) ; (var val) pair list
 (define (letrec-body exp) (cddr exp))
 
-; Ex 4.6 : let
+; let
 ; form: (let ((<var1> <exp1>) ... (<varn> <expn>)) <body>)
 ; convert to: ((lambda (<var1> ... <varn>) <body>) <exp1> ... <expn>)
 ; convert let to combination of above expressions
@@ -308,7 +319,7 @@
     )
 )
 
-; Ex 4.7 : let*
+; let*
 ; form: just like let
 ; could use begin for let*-body or just keep body as a sequence of expressions
 (define (let*->nested-lets exp)
@@ -321,7 +332,7 @@
     (make-lets (let*-vars exp) (let*-vals exp))
 )
 
-; Ex 4.8 : named let
+; named let
 ; form: (let <name> ((<var1> <exp1>) ... (<varn> <expn>)) <body>)
 ; convert to: ((lambda () (define <name> (<var1> ... <varn>) <body>) (<name> <exp1> ... <expn>)))
 ; named let is equivalent to a function definition and a call to this function
@@ -330,7 +341,7 @@
     (make-procedure-definition (named-let-name exp) (named-let-vars exp) (named-let-body exp))
 )
 
-; Ex 4.20 : letrec
+; letrec
 ; just like inner definitions
 ; equal to:
 ; (lambda <vars>
@@ -400,6 +411,25 @@
     )
 )
 
+; lazy evaluation
+; get actual values of arugments
+(define (list-of-arg-values exps env)
+    (if (no-operands? exps)
+        '()
+        (cons (actual-value (first-operand exps) env)
+              (list-of-arg-values (rest-operands exps) env))
+    )
+)
+; delay arguments
+(define (list-of-delayed-args exps env)
+    (if (no-operands? exps)
+        '()
+        (cons (delay-it (first-operand exps) env)
+              (list-of-delayed-args (rest-operands exps) env))
+    )
+)
+
+
 ; ========================================= eval ================================================================================
 ; eval
 (define (eval exp env)
@@ -416,130 +446,45 @@
           ((let*? exp) (eval (let->combination (let*->nested-lets exp)) env))
           ((letrec? exp) (eval (let->combination (letrec->let exp)) env))
           ((while? exp) (eval (while->combination exp) env))
-          ((application? exp) (apply- (eval (operator exp) env) (list-of-values (operands exp) env)))
+          ;((application? exp) (apply- (eval (operator exp) env) (list-of-values (operands exp) env)))
+          ((application? exp) (apply- (actual-value (operator exp) env) (operands exp) env)) ; lazy evaluation now.
           (else (error "Unkown expression type -- in procedure eval, " exp))
     )
 )
 
-; ========================================= analyze =============================================================================
-; separate new eval
-(define (new-eval exp env)
-    ((analyze exp) env)
+; ========================================= lazy evaluation =====================================================================
+; abastraction of thunk
+(define (thunk? obj) (tagged-list? obj 'thunk))
+(define (make-thunk exp env) (list 'thunk exp env))
+(define (thunk-exp obj) (cadr obj))
+(define (thunk-env obj) (caddr obj))
+
+; for thunk to memorize, when a thunk been evaluated, convert it into an evaluated thunk.
+(define (evaluated-thunk? obj) (tagged-list? obj 'evaluated-thunk))
+(define (thunk-value evaluated-thunk) (cadr evaluated-thunk))
+
+; evaluate the actual value of an expression, eval then force
+(define (actual-value exp env)
+    (force-it (eval exp env))
 )
-(define (analyze exp)
-    (cond ((self-evaluating? exp) (analyze-self-evaluating exp))
-          ((variable? exp) (analyze-variable exp))
-          ((quoted? exp) (analyze-quoted exp))
-          ((assignment? exp) (analyze-assignment exp))
-          ((definition? exp) (analyze-definition exp))
-          ((if? exp) (analyze-if exp))
-          ((lambda? exp) (analyze-lambda exp))
-          ((begin? exp) (analyze-sequence (begin-actions exp)))
-          ((cond? exp) (analyze (cond->if exp)))
-          ((let? exp) (analyze (let->combination exp)))
-          ((let*? exp) (analyze (let->combination (let*->nested-lets exp))))
-          ((letrec? exp) (analyze (let->combination (letrec->let exp))))
-          ((while? exp) (analyze (while->combination exp)))
-          ((application? exp) (analyze-application exp))
-          (else (error "Unknown expression type -- in procedure analyze, " exp))
+
+; representation of thunk (aka promise object in native Scheme)
+(define (force-it obj)
+    (cond ((thunk? obj) ; not evaluated yet
+           (let ((result (actual-value (thunk-exp obj) (thunk-env obj))))
+               (set-car! obj 'evaluated-thunk)
+               (set-car! (cdr obj) result) ; replace exp with its value
+               (set-car! (cddr obj) '()) ; forget unneeded env
+               result
+           ))
+          ((evaluated-thunk? obj) (thunk-value obj))
+          (else obj) ; not thunk
     )
 )
 
-; self-evaluating
-(define (analyze-self-evaluating exp) (lambda (env) exp))
-; varaible
-(define (analyze-variable exp)
-    (lambda (env)
-        (lookup-variable-value exp env)
-    )
-)
-; quotation
-(define (analyze-quoted exp)
-    (let ((qval (text-of-quotation exp)))
-        (lambda (env) qval)
-    )
-)
-; assignment
-(define (analyze-assignment exp)
-    (let ((var (assignment-variable exp))
-          (vproc (analyze (assignment-value exp))))
-        (lambda (env)
-            (set-variable-value! var (vproc env) env)
-            'ok
-        )
-    )
-)
-; definition
-(define (analyze-definition exp)
-    (let ((var (definition-variable exp))
-          (vproc (analyze (definition-value exp))))
-        (lambda (env)
-            (define-variable! var (vproc env) env)
-            'ok
-        )
-    )
-)
-; if
-(define (analyze-if exp)
-    (let ((pproc (analyze (if-predicate exp)))
-          (cproc (analyze (if-consequent exp)))
-          (aproc (analyze (if-alternative exp))))
-        (lambda (env)
-            (if (true? (pproc env))
-                (cproc env)
-                (aproc env)
-            )
-        )
-    )
-)
-; lambda
-(define (analyze-lambda exp)
-    (let ((vars (lambda-parameters exp))
-          (bproc (analyze-sequence (scan-out-defines (lambda-body exp))))) ; first scan-out-defines to support inner definition
-        (lambda (env)
-            (make-procedure vars bproc env)
-        )
-    )
-)
-; sequence
-(define (analyze-sequence exps)
-    (define (sequentially proc1 proc2)
-        (lambda (env) (proc1 env) (proc2 env))
-    )
-    (define (loop first-proc rest-procs)
-        (if (null? rest-procs)
-            first-proc
-            (loop (sequentially first-proc (car rest-procs))
-                  (cdr rest-procs))
-        )
-    )
-    (let ((procs (map analyze exps)))
-        (if (null? procs)
-            (error "Empty sequence -- in analyze-sequence")
-        )
-        (loop (car procs) (cdr procs))
-    )
-)
-; application
-(define (analyze-application exp)
-    (let ((fproc (analyze (operator exp)))
-          (aprocs (map analyze (operands exp))))
-        (lambda (env)
-            (execute-application (fproc env)
-                (map (lambda (aproc) (aproc env)) aprocs)
-            )
-        )
-    )
-)
-(define (execute-application proc args)
-    (cond ((primitive-procedure? proc) (apply-primitive-procedure proc args))
-          ((compound-procedure? proc)
-           ((procedure-body proc) (extend-environment (procedure-parameters proc)
-                                                      args
-                                                      (procedure-environment proc)))
-          )
-          (else (error "Unknown procedure type -- in execute-application, " proc))
-    )
+; delay an object
+(define (delay-it exp env)
+    (make-thunk exp env)
 )
 
 ; ========================================= procedure calls =====================================================================
@@ -549,8 +494,7 @@
 (define (primitive-implementation procedure) (cadr procedure))
 ; compound procedure (self defined procedure)
 (define (compound-procedure? procedure) (tagged-list? procedure 'procedure))
-; (define (make-procedure parameters body env) (list 'procedure parameters (scan-out-defines body) env)) ; construct compund procedures
-(define (make-procedure parameters body env) (list 'procedure parameters body env))
+(define (make-procedure parameters body env) (list 'procedure parameters (scan-out-defines body) env)) ; construct compund procedures
 (define (procedure-parameters exp) (cadr exp))
 (define (procedure-body exp) (caddr exp))
 (define (procedure-environment exp) (cadddr exp))
@@ -558,7 +502,7 @@
 ; evaluate primitive procedures
 (define apply-in-underlying-scheme apply)
 (define (apply-primitive-procedure procedure arguments)
-    (apply-in-underlying-scheme (primitive-implementation procedure) arguments) ; this apply- is the Scheme underlying apply.
+    (apply-in-underlying-scheme (primitive-implementation procedure) arguments)
 )
 
 ; procedure application
@@ -567,7 +511,7 @@
 )
 
 ; take care of inner definitions of a lambda
-; form: 
+; form:
 ; (lambda (vars)
 ;   (define u <e1>)
 ;   (define v <e2>)
@@ -742,28 +686,28 @@
 ; apply
 ; in order to avoid nameclash, need to rename apply to apply-,
 ; because there is no way to keep the underlying apply and define a new apply at same time.
-(define (apply- procedure arguments)
-    (cond ((primitive-procedure? procedure) (apply-primitive-procedure procedure arguments))
+(define (apply- procedure arguments env)
+    (cond ((primitive-procedure? procedure) (apply-primitive-procedure procedure (list-of-arg-values arguments env))) ; changed, get actual values of arguments
           ((compound-procedure? procedure)
            (eval-sequence (procedure-body procedure)
                           (extend-environment (procedure-parameters procedure)
-                                              arguments
+                                              (list-of-delayed-args arguments env) ; changed, pass delayed objects of arguments
                                               (procedure-environment procedure))
            ))
-          (else (error "Unknown procedrue type -- in procedure apply-, " (list procedure arguments)))
+          (else (error "Unkown procedrue type -- in procedure apply-, " (list procedure arguments)))
     )
 )
 
 ; ========================================= REPL ==================================================================================
 ; Read-Eval-Print-Loop
-(define input-prompt ";;; M-Eval input: ")
-(define output-prompt ";;; M-Eval value: ")
+(define input-prompt ";;; L-Eval input: ")
+(define output-prompt ";;; L-Eval value: ")
 (define (driver-loop port)
     (prompt-for-input input-prompt)
     (let ((input (read port)))
         (if (eof-object? input)
             (display "====== eof ======")
-            (begin (let ((output (new-eval input the-global-environment)))
+            (begin (let ((output (actual-value input the-global-environment)))
                         (announce-output output-prompt)
                         (user-print output)
                     )
@@ -771,7 +715,7 @@
             )
         )
     )
-    
+
 )
 (define (prompt-for-input string)
     (newline)
@@ -792,35 +736,11 @@
     )
 )
 
-; ========================================= Ex 4.19 =================================================================================
-; test of Ex 4.19
-; current implentation supports Eva, and not compatible with sicp language in Racket which reports an error.
-; (let ((a 1))
-;     (define (f x)
-;         (define b (+ a x))
-;         (define a 5)
-;         (+ a b)
-;     )
-;     (f 10)
-; )
-; in our REPL, the result is 20, and no such a mechanism to report an error.
-; in order to do as sicp language in Racket, a lot of work to do, so I am not gonna do it for now.
-
-; ========================================= Ex 4.20 =================================================================================
-; Ex 4.20
-; test of letrec
-(letrec ((even? (lambda (x) (if (= x 0) true (odd? (- x 1)))))
-         (odd? (lambda (x) (if (= x 0) false (even? (- x 1))))))
-    (even? 10)
-)
-; result : should be #t
-; should run correctly in REPL.
-
 ; ========================================== test REPL ============================================================================
 ; run REPL
 ; run on Scheme test source file
 (driver-loop (open-input-file "TestOfEvaluator.rkt"))
-; all passed except => in cond (not implemented)
+; all passed
 
 ; interactive mode
 ; (driver-loop (current-input-port))

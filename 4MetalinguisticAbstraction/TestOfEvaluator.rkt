@@ -20,12 +20,12 @@ a
 ; definition
 (define (square x) (* x x))
 (square 100)
-;inner definition, 1 support, 2 not support
-; (define (hello)
-;     (define (world) 'nice)
-;     (world)
-; )
-; (hello)
+;inner definition
+(define (hello)
+    (define (world) 'nice)
+    (world)
+)
+(hello)
 
 ; if
 (if (> a 10)
