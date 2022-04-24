@@ -11,9 +11,9 @@
 - [Racket使用问题汇总](Notes/UsingRacket.md)。
 - [我的Scheme编码风格](Notes/MySchemeCodingStyle.md)。
 
-习题完成说明：
+习题和代码说明：
 - [需要编程的习题完成情况](Notes/Exercises.md)。
-- [比较复杂的习题和代码汇总与说明](Notes/ComplexExercises.md)。
+- [比较复杂的代码和习题汇总与说明](Notes/ComplexExercises.md)（这些代码是整本书的精髓，完美用上了前面所学的东西，代码规模大概在几百到数千行左右，模块切分和解耦得十分漂亮，充分展示了好的Scheme程序应该是什么样子的）。
 
 License：[WTFPL](LICENSE)。
 
