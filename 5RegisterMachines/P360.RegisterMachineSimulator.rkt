@@ -53,10 +53,24 @@
 ; register
 ; implement as a procedure with local states
 (define (make-register name)
-    (let ((contents '*unassigned*))
+    (let ((contents '*unassigned*)
+          (trace-on false)) ; trace register modification
+        ; Ex 5.18
+        (define (display-reg-info new-value)
+            (display (list "***** Register" name "modification:" "original value:" contents ", new value:" new-value))
+            (newline)
+        )
         (define (dispatch message)
             (cond ((eq? message 'get) contents)
-                  ((eq? message 'set) (lambda (value) (set! contents value)))
+                  ((eq? message 'set) (lambda (value)
+                                            ; trace register when set
+                                            (if trace-on
+                                                (display-reg-info value)
+                                            )
+                                            (set! contents value)
+                                      ))
+                  ((eq? message 'trace-on) (set! trace-on true))
+                  ((eq? message 'trace-off) (set! trace-on false))
                   (else (error "Unknown message -- in procedure make-register/dispatch, " message))
             )
         )
@@ -98,8 +112,7 @@
             'done
         )
         (define (print-statistics)
-            (display (list 'total-pushes '= number-pushes
-                           'maximum-depth '= max-depth))
+            (display (list "+++++ Stack:" 'total-pushes '= number-pushes 'maximum-depth '= max-depth))
             (newline)
         )
         (define (dispatch message)
@@ -124,7 +137,14 @@
     (let ((pc (make-register 'pc))          ; program counter
           (flag (make-register 'flag))      ; test flag, control branch instruction
           (stack (make-stack))              ; stack
-          (the-instruction-sequence '()))   ; instruction sequence
+          (the-instruction-sequence '())    ; instruction sequence
+          (instruction-number 0)            ; count of instruction number executed
+          (trace-on false))                 ; open instruction trace or not
+        ; Ex 5.15
+        (define (print-instruction-number)
+            (display (list "Instructions that have already executed:" instruction-number))
+            (newline)
+        )
         (let ((the-ops (list (list 'initialize-stack (lambda () (stack 'initialize)))
                              (list 'print-stack-statistics (lambda () (stack 'print-statistics))))) ; operations
               (register-table (list (list 'pc pc) (list 'flag flag))))                  ; all registers
@@ -151,7 +171,20 @@
                 (let ((insts (get-contents pc)))
                     (if (null? insts)
                         'done ; to the end of the instruction sequence, done.
-                        (begin ((instruction-execution-proc (car insts))) ; execute current instruction
+                        (begin ; Ex 5.16 , trace instruction currently executing
+                               (if trace-on
+                                   ; Ex 5.17 : trace label before every instruction (if exist)
+                                   (begin (if (not (null? (instruction-label (car insts)))) 
+                                              (begin (display (list "===== Label:" (instruction-label (car insts))))
+                                                     (newline)
+                                              )
+                                          )
+                                          (display (list "Instruction:" (caar insts)))
+                                          (newline)
+                                   )
+                               )
+                               ((instruction-execution-proc (car insts))) ; execute current instruction
+                               (set! instruction-number (+ instruction-number 1))
                                (execute) ; continue to execute
                         )
                     )
@@ -168,6 +201,12 @@
                       ((eq? message 'install-operations) (lambda (ops) (set! the-ops (append the-ops ops))))
                       ((eq? message 'stack) stack)
                       ((eq? message 'operations) the-ops)
+                      ; for statistics and debug informations
+                      ((eq? message 'instruction-number) (print-instruction-number))
+                      ((eq? message 'trace-on) (set! trace-on true))
+                      ((eq? message 'trace-off) (set! trace-on false))
+                      ((eq? message 'register-trace-on) (lambda (register-name) ((lookup-register register-name) 'trace-on)))
+                      ((eq? message 'register-trace-off) (lambda (register-name) ((lookup-register register-name) 'trace-off)))
                       (else (error "Unknown request -- in procedure make-new-machine/dispatch, " message))
                 )
             )
@@ -177,7 +216,12 @@
 )
 ; get register of register machine
 (define (get-register machine register-name) ((machine 'get-register) register-name))
-
+; trace of instruction on/off
+(define (instruction-trace-on machine) (machine 'trace-on))
+(define (instruction-trace-off machine) (machine 'trace-off))
+; trace of register on/off
+(define (register-trace-on machine register-name) ((machine 'register-trace-on) register-name))
+(define (register-trace-off machine register-name) ((machine 'register-trace-off) register-name))
 
 ; ================================ extract instructions and labels from controller text =================================
 
@@ -208,9 +252,17 @@
                                 ; already exist
                                 (error ("Repeated label name -- in procedure extract-labels, " cur-inst))
                                 ; new label
-                                (receive insts
-                                         (cons (make-label-entry cur-inst insts)
-                                               labels))
+                                ; Ex 5.17
+                                (begin
+                                    ; save label to the instruction behind it
+                                    (if (not (null? insts)) ; only when there are instructions behind the label
+                                        (set-instruction-label (car insts) cur-inst)
+                                    )
+                                    ; result
+                                    (receive insts
+                                             (cons (make-label-entry cur-inst insts)
+                                                   labels))
+                                )
                             )
                         )
                         ; instruction
@@ -244,11 +296,17 @@
     )
 )
 
-; instruction: (instruction-text . execution procedure generated by make-execution-procedure)
-(define (make-instruction text) (cons text '()))
+; Ex 5.17 : add lebel (just before the instruction) to the instruction sequence
+; instruction: (instruction-text
+;               label just before this instruction
+;               execution procedure generated by make-execution-procedure)
+(define (make-instruction text) (list text '() '()))
+(define (make-instruction-with-label text label) (list text label '()))
 (define (instruction-text inst) (car inst))
-(define (instruction-execution-proc inst) (cdr inst))
-(define (set-instruction-execution-proc! inst proc) (set-cdr! inst proc))
+(define (instruction-label inst) (cadr inst))
+(define (instruction-execution-proc inst) (caddr inst))
+(define (set-instruction-execution-proc! inst proc) (set-car! (cddr inst) proc))
+(define (set-instruction-label inst label) (set-car! (cdr inst) label))
 
 ; label: (label-name . instructions right behind it)
 (define (make-label-entry label-name insts) (cons label-name insts))
@@ -651,9 +709,22 @@
 
 ; run the gcd-machine with specific inputs
 (define (my-gcd a b)
+    ; trace on
+    (instruction-trace-on gcd-machine)
+    (register-trace-on gcd-machine 'a)
+    (register-trace-on gcd-machine 'b)
+    ; initialization
     (set-register-contents! gcd-machine 'a a)
     (set-register-contents! gcd-machine 'b b)
+    ; execution
     (start gcd-machine)
+    ; trace off
+    (instruction-trace-off gcd-machine)
+    (register-trace-off gcd-machine 'a)
+    (register-trace-off gcd-machine 'b)
+    ; instruction that executed count
+    (gcd-machine 'instruction-number)
+    ; get result
     (get-register-contents gcd-machine 'a) ; result is stored in register a
 )
 
