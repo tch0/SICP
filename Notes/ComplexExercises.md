@@ -6,6 +6,10 @@
 
 - [第五章第二节的寄存器机器模拟器](../5RegisterMachines/P360.RegisterMachineSimulator.rkt)：抽象了基于寄存器和堆栈的机器作为更底层的执行设备，设计了一套基于S表达式的汇编指令集用以控制寄存器机器，使用Scheme实现了寄存器机器的模拟器（即实现了该汇编指令集的虚拟机）。
 
+- [第五章第四节的显示控制求值器](../5RegisterMachines/P384.ExplicitControlEvalutor.rkt)：基于5.2的寄存器机器模拟器，使用其汇编语言重构了4.1节的运循环求值器，实现了尾递归。
+
+- [第五章第五节最终的编译器](../5RegisterMachines/P399.Compiler.rkt)：基于5.2的寄存器机器模拟器，完成了Scheme源程序到汇编语言的编译，复用了大量4.1节的过程，暂不完整，TODO。
+
 ## 比较复杂的习题汇总
 
 暂无。
